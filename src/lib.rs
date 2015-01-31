@@ -46,3 +46,19 @@ fn insertion_sort<T, F>(v: &mut [T], mut compare: F) where F: FnMut(&T, &T) -> O
         }
     }
 }
+
+fn slice_print<T: fmt::String>(v: &[T]) {
+    print!("[ ");
+    let len = v.len();
+    if len == 0 {
+        println!("]");
+        return;
+    }
+
+    print!("{}", v[0]);
+    for i in range(1, len) {
+        print!(", {}", v[i]);
+    }
+
+    println!(" ]");
+}
