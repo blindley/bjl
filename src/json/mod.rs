@@ -48,82 +48,84 @@ fn json_object_from_tokens(tokens: &[JSON_Token]) -> Option<JSON_Object> {
 
 fn json_object_from_inner_tokens(mut tokens: &[JSON_Token]) -> Option<JSON_Object> {
     let mut object = JSON_Object::new();
+    let mut first = true;
     while tokens.len() > 0 {
-        let (head, tail) = peel_key_value_pair(tokens);
-        match head {
-            Some(pair) => { object.insert(pair.0, pair.1); },
-            None => { return None; }
-        }
-        tokens = tail;
-        if tokens.len() > 0 {
+        if !first {
             if let JSON_Token::Comma = tokens[0] {
                 tokens = chop_head(tokens, 1);
             } else {
                 return None;
             }
         }
+        match peel_key_value_pair(tokens) {
+            Some((kvpair, tail)) => {
+                object.insert(kvpair.0, kvpair.1);
+                tokens = tail;
+            },
+            None => { return None; }
+        }
+        first = false;
     }
     Some(object)
 }
 
-fn peel_key_value_pair(tokens: &[JSON_Token]) -> (Option<KeyValuePair>, &[JSON_Token]) {
-    if tokens.len() < 3 { return (None, tokens); }
+fn peel_key_value_pair(tokens: &[JSON_Token]) -> Option<(KeyValuePair, &[JSON_Token])> {
+    if tokens.len() < 3 { return None; }
     let key = 
         match &tokens[0] {
             &JSON_Token::String(ref key) => key.clone(),
-            _ => { return (None, tokens); }
+            _ => { return None; }
         };
 
     match &tokens[1] {
         &JSON_Token::Colon => (),
-        _ => { return (None, tokens); }
+        _ => { return None; }
     }
 
     let tail = chop_head(tokens, 2);
 
-    let (value, tail) = peel_value(tail);
-    match value {
-        Some(value) => {
-            let pair = KeyValuePair(key, value);
-            return (Some(pair), tail);
+    match peel_value(tail) {
+        Some((value, tail)) => {
+            let kvpair = KeyValuePair(key, value);
+            return Some((kvpair, tail));
         },
-        None => { return (None, tail); }
+        None => { return None; }
     }
 }
 
-fn peel_value(mut tokens: &[JSON_Token]) -> (Option<JSON_Value>, &[JSON_Token]) {
-    if tokens.len() == 0 { return (None, tokens); }
+fn peel_value(mut tokens: &[JSON_Token]) -> Option<(JSON_Value, &[JSON_Token])> {
+    if tokens.len() == 0 { return None; }
     match &tokens[0] {
         &JSON_Token::LBrace => peel_object(tokens),
         &JSON_Token::LBracket => peel_array(tokens),
         &JSON_Token::Number(value) => {
             let tokens = chop_head(tokens, 1);
             let value = JSON_Value::Number(value);
-            (Some(value), tokens)
+            Some((value, tokens))
         },
         &JSON_Token::String(ref value) => {
             let tokens = chop_head(tokens, 1);
             let value = JSON_Value::String(value.clone());
-            (Some(value), tokens)
+            Some((value, tokens))
         },
         &JSON_Token::Bool(value) => {
             let tokens = chop_head(tokens, 1);
             let value = JSON_Value::Bool(value);
-            (Some(value), tokens)
+            Some((value, tokens))
         },
         &JSON_Token::Null => {
             let tokens = chop_head(tokens, 1);
             let value = JSON_Value::Null;
-            (Some(value), tokens)
+            Some((value, tokens))
         },
-        _ => (None, tokens),
+        _ => None,
     }
 }
 
-fn peel_object(mut tokens: &[JSON_Token]) -> (Option<JSON_Value>, &[JSON_Token]) {
-    if tokens.len() < 2 { return (None, tokens); }
+fn peel_object(mut tokens: &[JSON_Token]) -> Option<(JSON_Value, &[JSON_Token])> {
+    if tokens.len() < 2 { return None; }
     if let JSON_Token::LBrace = tokens[0] {} else {
-        return (None, tokens);
+        return None;
     }
 
     let mut object = JSON_Object::new();
@@ -132,34 +134,36 @@ fn peel_object(mut tokens: &[JSON_Token]) -> (Option<JSON_Value>, &[JSON_Token])
     let mut first = true;
     while tokens.len() > 0 {
         if let JSON_Token::RBrace = tokens[0] {
-            return (Some(JSON_Value::Object(object)), chop_head(tokens, 1));
+            let value = JSON_Value::Object(object);
+            let tokens = chop_head(tokens, 1);
+            return Some((value, tokens));
         }
 
         if !first {
             if let JSON_Token::Comma = tokens[0] {} else {
-                return (None, tokens);
+                return None;
             }
             tokens = chop_head(tokens, 1);
         }
 
-        let x = peel_key_value_pair(tokens);
-        if let Some(pair) = x.0 {
-            object.insert(pair.0, pair.1);
-        } else {
-            return (None, tokens);
+        match peel_key_value_pair(tokens) {
+            Some((kvpair, tail)) => {
+                object.insert(kvpair.0, kvpair.1);
+                tokens = tail;
+            },
+            None => { return None; }
         }
-        tokens = x.1;
 
         first = false;
     }
 
-    (None, tokens)
+    None
 }
 
-fn peel_array(mut tokens: &[JSON_Token]) -> (Option<JSON_Value>, &[JSON_Token]) {
-    if tokens.len() < 2 { return (None, tokens); }
+fn peel_array(mut tokens: &[JSON_Token]) -> Option<(JSON_Value, &[JSON_Token])> {
+    if tokens.len() < 2 { return None; }
     if let JSON_Token::LBracket = tokens[0] {} else {
-        return (None, tokens);
+        return None;
     }
 
     let mut array = JSON_Array::new();
@@ -168,28 +172,30 @@ fn peel_array(mut tokens: &[JSON_Token]) -> (Option<JSON_Value>, &[JSON_Token]) 
     let mut first = true;
     while tokens.len() > 0 {
         if let JSON_Token::RBracket = tokens[0] {
-            return (Some(JSON_Value::Array(array)), chop_head(tokens, 1));
+            let value = JSON_Value::Array(array);
+            let tokens = chop_head(tokens, 1);
+            return Some((value, tokens));
         }
 
         if !first {
             if let JSON_Token::Comma = tokens[0] {} else {
-                return (None, tokens);
+                return None;
             }
             tokens = chop_head(tokens, 1);
         }
 
-        let x = peel_value(tokens);
-        if let Some(value) = x.0 {
-            array.push(value);
-        } else {
-            return (None, tokens);
+        match peel_value(tokens) {
+            Some((value, tail)) => {
+                array.push(value);
+                tokens = tail;
+            },
+            None => { return None; }
         }
-        tokens = x.1;
 
         first = false;
     }
 
-    (None, tokens)
+    None
 }
 
 #[derive(Debug, Clone)]
