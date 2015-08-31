@@ -1,11 +1,12 @@
+#[derive(Debug, Clone)]
 pub struct Grid {
     m_v : Vec<i32>,
-    m_width : usize,
-    m_height : usize
+    m_width : i32,
+    m_height : i32
 }
 
 impl Grid {
-    pub fn new(width: usize, height: usize) -> Self {
+    pub fn new(width: i32, height: i32) -> Self {
         let mut g = Grid {
             m_width: width,
             m_height: height,
@@ -16,30 +17,24 @@ impl Grid {
         g
     }
 
-    pub fn resize(&mut self, width: usize, height: usize) {
+    pub fn resize(&mut self, width: i32, height: i32) {
         self.m_width = width;
         self.m_height = height;
-        self.m_v.resize(width * height, 0);
+
+        // TODO : use this instead when Vec::resize becomes stable
+        // self.m_v.resize(width * height, 0);
+
+        self.m_v = vec![0; (width * height) as usize];
     }
 
-    pub fn get(&self, x: usize, y: usize) -> i32 {
-        self.m_v[y * self.m_width + x]
+    pub fn get(&self, x: i32, y: i32) -> i32 {
+        self.m_v[(y * self.m_width + x) as usize]
     }
 
-    pub fn set(&mut self, x: usize, y: usize, val: i32) {
-        self.m_v[y * self.m_width + x] = val;
+    pub fn set(&mut self, x: i32, y: i32, val: i32) {
+        self.m_v[(y * self.m_width + x) as usize] = val;
     }
 
-    pub fn width(&self) -> usize { self.m_width }
-    pub fn height(&self) -> usize { self.m_height }
-}
-
-impl Clone for Grid {
-    fn clone(&self) -> Self {
-        Grid {
-            m_width : self.m_width,
-            m_height : self.m_height,
-            m_v : self.m_v.clone()
-        }
-    }
+    pub fn width(&self) -> i32 { self.m_width }
+    pub fn height(&self) -> i32 { self.m_height }
 }

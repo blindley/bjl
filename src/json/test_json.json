@@ -1,0 +1,20 @@
+{
+    "object": {
+        "pi": 3.14,
+        "flat world": true,
+        "squares": [
+            1,
+            4,
+            9,
+            16,
+            25
+        ],
+        "phantoon": "dickhead",
+        "hero": {
+            "name": "Guy",
+            "hp": 10,
+            "weapon": "Bastard Sword"
+        }
+    },
+    "pengu": null
+}
