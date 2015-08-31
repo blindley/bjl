@@ -44,6 +44,15 @@ pub enum JSON_Value {
     Null,
 }
 
+pub fn parse_json_string(json_str: &str) -> Option<JSON_Object> {
+    match tokenize_json_string(json_str) {
+        Some(tokens) => json_object_from_tokens(&tokens),
+        None => None,
+    }
+}
+
+type PeelResult<'a, T> = Option<(T, &'a [JSON_Token])>;
+
 fn chop_head<T>(slice: &[T], head: usize) -> &[T] {
     &slice[head..slice.len()]
 }
@@ -54,13 +63,6 @@ fn chop_tail<T>(slice: &[T], tail: usize) -> &[T] {
 
 fn chop<T>(slice: &[T], head: usize, tail: usize) -> &[T] {
     chop_head(chop_tail(slice, tail), head)
-}
-
-pub fn parse_json_string(json_str: &str) -> Option<JSON_Object> {
-    match tokenize_json_string(json_str) {
-        Some(tokens) => json_object_from_tokens(&tokens),
-        None => None,
-    }
 }
 
 fn json_object_from_tokens(tokens: &[JSON_Token]) -> Option<JSON_Object> {
@@ -75,7 +77,7 @@ fn json_object_from_tokens(tokens: &[JSON_Token]) -> Option<JSON_Object> {
     }
 }
 
-fn peel_key_value_pair(tokens: &[JSON_Token]) -> Option<(KeyValuePair, &[JSON_Token])> {
+fn peel_key_value_pair(tokens: &[JSON_Token]) -> PeelResult<KeyValuePair> {
     if tokens.len() < 3 { return None; }
     let key = 
         match &tokens[0] {
@@ -99,7 +101,7 @@ fn peel_key_value_pair(tokens: &[JSON_Token]) -> Option<(KeyValuePair, &[JSON_To
     }
 }
 
-fn peel_value(mut tokens: &[JSON_Token]) -> Option<(JSON_Value, &[JSON_Token])> {
+fn peel_value(mut tokens: &[JSON_Token]) -> PeelResult<JSON_Value> {
     if tokens.len() == 0 { return None; }
     match &tokens[0] {
         &JSON_Token::LBrace => peel_object_as_value(tokens),
@@ -128,7 +130,7 @@ fn peel_value(mut tokens: &[JSON_Token]) -> Option<(JSON_Value, &[JSON_Token])> 
     }
 }
 
-fn peel_object(mut tokens: &[JSON_Token]) -> Option<(JSON_Object, &[JSON_Token])> {
+fn peel_object(mut tokens: &[JSON_Token]) -> PeelResult<JSON_Object> {
     if tokens.len() < 2 { return None; }
     if let JSON_Token::LBrace = tokens[0] {} else {
         return None;
@@ -163,14 +165,14 @@ fn peel_object(mut tokens: &[JSON_Token]) -> Option<(JSON_Object, &[JSON_Token])
     None
 }
 
-fn peel_object_as_value(tokens: &[JSON_Token]) -> Option<(JSON_Value, &[JSON_Token])> {
+fn peel_object_as_value(tokens: &[JSON_Token]) -> PeelResult<JSON_Value> {
     match peel_object(tokens) {
         Some((object, tail)) => Some((JSON_Value::Object(object), tail)),
         None => None,
     }
 }
 
-fn peel_array(mut tokens: &[JSON_Token]) -> Option<(JSON_Array, &[JSON_Token])> {
+fn peel_array(mut tokens: &[JSON_Token]) -> PeelResult<JSON_Array> {
     if tokens.len() < 2 { return None; }
     if let JSON_Token::LBracket = tokens[0] {} else {
         return None;
@@ -205,7 +207,7 @@ fn peel_array(mut tokens: &[JSON_Token]) -> Option<(JSON_Array, &[JSON_Token])> 
     None
 }
 
-fn peel_array_as_value(tokens: &[JSON_Token]) -> Option<(JSON_Value, &[JSON_Token])> {
+fn peel_array_as_value(tokens: &[JSON_Token]) -> PeelResult<JSON_Value> {
     match peel_array(tokens) {
         Some((array, tail)) => Some((JSON_Value::Array(array), tail)),
         None => None,
