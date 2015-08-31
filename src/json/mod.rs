@@ -23,6 +23,39 @@ fn test_main() {
     }
 }
 
+#[derive(Debug, Clone)]
+struct KeyValuePair(String, JSON_Value);
+
+use std::collections::HashMap;
+#[allow(non_camel_case_types)]
+pub type JSON_Object = HashMap<String, JSON_Value>;
+
+#[allow(non_camel_case_types)]
+pub type JSON_Array = Vec<JSON_Value>;
+
+#[allow(non_camel_case_types)]
+#[derive(Debug, Clone)]
+pub enum JSON_Value {
+    String(String),
+    Number(f64),
+    Object(JSON_Object),
+    Array(JSON_Array),
+    Bool(bool),
+    Null,
+}
+
+fn chop_head<T>(slice: &[T], head: usize) -> &[T] {
+    &slice[head..slice.len()]
+}
+
+fn chop_tail<T>(slice: &[T], tail: usize) -> &[T] {
+    &slice[0..(slice.len() - tail)]
+}
+
+fn chop<T>(slice: &[T], head: usize, tail: usize) -> &[T] {
+    chop_head(chop_tail(slice, tail), head)
+}
+
 pub fn parse_json_string(json_str: &str) -> Option<JSON_Object> {
     match tokenize_json_string(json_str) {
         Some(tokens) => json_object_from_tokens(&tokens),
@@ -32,14 +65,10 @@ pub fn parse_json_string(json_str: &str) -> Option<JSON_Object> {
 
 fn json_object_from_tokens(tokens: &[JSON_Token]) -> Option<JSON_Object> {
     match peel_object(tokens) {
-        Some((value, tail)) => {
-            if tail.len() != 0 {
-                None // a json file should only contain one object/array
-            } else {
-                match value {
-                    JSON_Value::Object(object) => Some(object),
-                    _ => None,
-                }
+        Some((object, tail)) => {
+            match tail.len() {
+                0 => Some(object),
+                _ => None,
             }
         },
         None => None,
@@ -73,8 +102,8 @@ fn peel_key_value_pair(tokens: &[JSON_Token]) -> Option<(KeyValuePair, &[JSON_To
 fn peel_value(mut tokens: &[JSON_Token]) -> Option<(JSON_Value, &[JSON_Token])> {
     if tokens.len() == 0 { return None; }
     match &tokens[0] {
-        &JSON_Token::LBrace => peel_object(tokens),
-        &JSON_Token::LBracket => peel_array(tokens),
+        &JSON_Token::LBrace => peel_object_as_value(tokens),
+        &JSON_Token::LBracket => peel_array_as_value(tokens),
         &JSON_Token::Number(value) => {
             let tokens = chop_head(tokens, 1);
             let value = JSON_Value::Number(value);
@@ -99,7 +128,7 @@ fn peel_value(mut tokens: &[JSON_Token]) -> Option<(JSON_Value, &[JSON_Token])> 
     }
 }
 
-fn peel_object(mut tokens: &[JSON_Token]) -> Option<(JSON_Value, &[JSON_Token])> {
+fn peel_object(mut tokens: &[JSON_Token]) -> Option<(JSON_Object, &[JSON_Token])> {
     if tokens.len() < 2 { return None; }
     if let JSON_Token::LBrace = tokens[0] {} else {
         return None;
@@ -111,9 +140,8 @@ fn peel_object(mut tokens: &[JSON_Token]) -> Option<(JSON_Value, &[JSON_Token])>
     let mut first = true;
     while tokens.len() > 0 {
         if let JSON_Token::RBrace = tokens[0] {
-            let value = JSON_Value::Object(object);
             let tokens = chop_head(tokens, 1);
-            return Some((value, tokens));
+            return Some((object, tokens));
         }
 
         if !first {
@@ -130,14 +158,19 @@ fn peel_object(mut tokens: &[JSON_Token]) -> Option<(JSON_Value, &[JSON_Token])>
             },
             None => { return None; }
         }
-
         first = false;
     }
-
     None
 }
 
-fn peel_array(mut tokens: &[JSON_Token]) -> Option<(JSON_Value, &[JSON_Token])> {
+fn peel_object_as_value(tokens: &[JSON_Token]) -> Option<(JSON_Value, &[JSON_Token])> {
+    match peel_object(tokens) {
+        Some((object, tail)) => Some((JSON_Value::Object(object), tail)),
+        None => None,
+    }
+}
+
+fn peel_array(mut tokens: &[JSON_Token]) -> Option<(JSON_Array, &[JSON_Token])> {
     if tokens.len() < 2 { return None; }
     if let JSON_Token::LBracket = tokens[0] {} else {
         return None;
@@ -149,9 +182,8 @@ fn peel_array(mut tokens: &[JSON_Token]) -> Option<(JSON_Value, &[JSON_Token])> 
     let mut first = true;
     while tokens.len() > 0 {
         if let JSON_Token::RBracket = tokens[0] {
-            let value = JSON_Value::Array(array);
             let tokens = chop_head(tokens, 1);
-            return Some((value, tokens));
+            return Some((array, tokens));
         }
 
         if !first {
@@ -168,42 +200,15 @@ fn peel_array(mut tokens: &[JSON_Token]) -> Option<(JSON_Value, &[JSON_Token])> 
             },
             None => { return None; }
         }
-
         first = false;
     }
-
     None
 }
 
-#[derive(Debug, Clone)]
-struct KeyValuePair(String, JSON_Value);
-
-use std::collections::HashMap;
-#[allow(non_camel_case_types)]
-pub type JSON_Object = HashMap<String, JSON_Value>;
-
-#[allow(non_camel_case_types)]
-pub type JSON_Array = Vec<JSON_Value>;
-
-#[allow(non_camel_case_types)]
-#[derive(Debug, Clone)]
-pub enum JSON_Value {
-    String(String),
-    Number(f64),
-    Object(JSON_Object),
-    Array(JSON_Array),
-    Bool(bool),
-    Null,
+fn peel_array_as_value(tokens: &[JSON_Token]) -> Option<(JSON_Value, &[JSON_Token])> {
+    match peel_array(tokens) {
+        Some((array, tail)) => Some((JSON_Value::Array(array), tail)),
+        None => None,
+    }
 }
 
-fn chop_head<T>(slice: &[T], head: usize) -> &[T] {
-    &slice[head..slice.len()]
-}
-
-fn chop_tail<T>(slice: &[T], tail: usize) -> &[T] {
-    &slice[0..(slice.len() - tail)]
-}
-
-fn chop<T>(slice: &[T], head: usize, tail: usize) -> &[T] {
-    chop_head(chop_tail(slice, tail), head)
-}
