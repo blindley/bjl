@@ -31,42 +31,19 @@ pub fn parse_json_string(json_str: &str) -> Option<JSON_Object> {
 }
 
 fn json_object_from_tokens(tokens: &[JSON_Token]) -> Option<JSON_Object> {
-    // check for outer braces
-    if tokens.len() < 2 { return None; }
-    if let JSON_Token::LBrace = tokens[0] {} else {
-        return None;
-    }
-
-    if let JSON_Token::RBrace = tokens[tokens.len() - 1] {} else {
-        return None;
-    }
-
-    // strip outer braces
-    let inner = chop(tokens, 1, 1);
-    json_object_from_inner_tokens(&inner)
-}
-
-fn json_object_from_inner_tokens(mut tokens: &[JSON_Token]) -> Option<JSON_Object> {
-    let mut object = JSON_Object::new();
-    let mut first = true;
-    while tokens.len() > 0 {
-        if !first {
-            if let JSON_Token::Comma = tokens[0] {
-                tokens = chop_head(tokens, 1);
+    match peel_object(tokens) {
+        Some((value, tail)) => {
+            if tail.len() != 0 {
+                None // a json file should only contain one object/array
             } else {
-                return None;
+                match value {
+                    JSON_Value::Object(object) => Some(object),
+                    _ => None,
+                }
             }
-        }
-        match peel_key_value_pair(tokens) {
-            Some((kvpair, tail)) => {
-                object.insert(kvpair.0, kvpair.1);
-                tokens = tail;
-            },
-            None => { return None; }
-        }
-        first = false;
+        },
+        None => None,
     }
-    Some(object)
 }
 
 fn peel_key_value_pair(tokens: &[JSON_Token]) -> Option<(KeyValuePair, &[JSON_Token])> {
