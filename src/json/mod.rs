@@ -79,25 +79,18 @@ fn json_object_from_tokens(tokens: &[JSON_Token]) -> Option<JSON_Object> {
 
 fn peel_key_value_pair(tokens: &[JSON_Token]) -> PeelResult<KeyValuePair> {
     if tokens.len() < 3 { return None; }
-    let key = 
-        match &tokens[0] {
-            &JSON_Token::String(ref key) => key.clone(),
-            _ => { return None; }
-        };
+    if !tokens[0].is_string() { return None; }
+    if !tokens[1].is_colon() { return None; }
 
-    match &tokens[1] {
-        &JSON_Token::Colon => (),
-        _ => { return None; }
-    }
+    let key = tokens[0].unwrap_string();
 
     let tail = chop_head(tokens, 2);
 
-    match peel_value(tail) {
-        Some((value, tail)) => {
-            let kvpair = KeyValuePair(key, value);
-            return Some((kvpair, tail));
-        },
-        None => { return None; }
+    if let Some((value, tail)) = peel_value(tail) {
+        let kvpair = KeyValuePair(key, value);
+        return Some((kvpair, tail));
+    } else {
+        return None;
     }
 }
 
@@ -132,24 +125,20 @@ fn peel_value(mut tokens: &[JSON_Token]) -> PeelResult<JSON_Value> {
 
 fn peel_object(mut tokens: &[JSON_Token]) -> PeelResult<JSON_Object> {
     if tokens.len() < 2 { return None; }
-    if let JSON_Token::LBrace = tokens[0] {} else {
-        return None;
-    }
+    if !tokens[0].is_lbrace() { return None; }
 
     let mut object = JSON_Object::new();
 
     tokens = chop_head(tokens, 1);
     let mut first = true;
     while tokens.len() > 0 {
-        if let JSON_Token::RBrace = tokens[0] {
+        if tokens[0].is_rbrace() {
             let tokens = chop_head(tokens, 1);
             return Some((object, tokens));
         }
 
         if !first {
-            if let JSON_Token::Comma = tokens[0] {} else {
-                return None;
-            }
+            if !tokens[0].is_comma() { return None; }
             tokens = chop_head(tokens, 1);
         }
 
@@ -174,7 +163,7 @@ fn peel_object_as_value(tokens: &[JSON_Token]) -> PeelResult<JSON_Value> {
 
 fn peel_array(mut tokens: &[JSON_Token]) -> PeelResult<JSON_Array> {
     if tokens.len() < 2 { return None; }
-    if let JSON_Token::LBracket = tokens[0] {} else {
+    if !tokens[0].is_lbracket() {
         return None;
     }
 
@@ -183,15 +172,13 @@ fn peel_array(mut tokens: &[JSON_Token]) -> PeelResult<JSON_Array> {
     tokens = chop_head(tokens, 1);
     let mut first = true;
     while tokens.len() > 0 {
-        if let JSON_Token::RBracket = tokens[0] {
+        if tokens[0].is_rbracket() {
             let tokens = chop_head(tokens, 1);
             return Some((array, tokens));
         }
 
         if !first {
-            if let JSON_Token::Comma = tokens[0] {} else {
-                return None;
-            }
+            if !tokens[0].is_comma() { return None; }
             tokens = chop_head(tokens, 1);
         }
 

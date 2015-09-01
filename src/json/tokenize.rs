@@ -10,6 +10,69 @@ pub enum JSON_Token {
     Null,
 }
 
+impl JSON_Token {
+    pub fn is_lbrace(&self) -> bool {
+        match *self { JSON_Token::LBrace => true, _ => false, }
+    }
+
+    pub fn is_rbrace(&self) -> bool {
+        match *self { JSON_Token::RBrace => true, _ => false, }
+    }
+
+    pub fn is_lbracket(&self) -> bool {
+        match *self { JSON_Token::LBracket => true, _ => false, }
+    }
+
+    pub fn is_rbracket(&self) -> bool {
+        match *self { JSON_Token::RBracket => true, _ => false, }
+    }
+
+    pub fn is_colon(&self) -> bool {
+        match *self { JSON_Token::Colon => true, _ => false, }
+    }
+
+    pub fn is_comma(&self) -> bool {
+        match *self { JSON_Token::Comma => true, _ => false, }
+    }
+
+    pub fn is_number(&self) -> bool {
+        match *self { JSON_Token::Number(..) => true, _ => false, }
+    }
+
+    pub fn is_string(&self) -> bool {
+        match *self { JSON_Token::String(..) => true, _ => false, }
+    }
+
+    pub fn is_bool(&self) -> bool {
+        match *self { JSON_Token::Bool(..) => true, _ => false, }
+    }
+
+    pub fn is_null(&self) -> bool {
+        match *self { JSON_Token::Null => true, _ => false, }
+    }
+
+    pub fn unwrap_number(&self) -> f64 {
+        match *self {
+            JSON_Token::Number(value) => value,
+            _ => { panic!(); }
+        }
+    }
+
+    pub fn unwrap_string(&self) -> String {
+        match *self {
+            JSON_Token::String(ref value) => value.clone(),
+            _ => { panic!(); }
+        }
+    }
+
+    pub fn unwrap_bool(&self) -> bool {
+        match *self {
+            JSON_Token::Bool(value) => value,
+            _ => { panic!(); }
+        }
+    }
+}
+
 pub fn tokenize_json_string(mut json: &str) -> Option<Vec<JSON_Token>> {
     let mut tokens: Vec<JSON_Token> = Vec::new();
     loop {
