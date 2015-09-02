@@ -44,11 +44,19 @@ pub enum JSON_Value {
     Null,
 }
 
-pub fn parse_json_string(json_str: &str) -> Option<JSON_Object> {
-    match tokenize_json_string(json_str) {
-        Some(tokens) => json_object_from_tokens(&tokens),
-        None => None,
+pub fn parse_json_string(json_str: &str) -> Option<JSON_Value> {
+    if let Some(tokens) = tokenize_json_string(json_str) {
+        if let Some((value, tail)) = peel_value(&tokens) {
+            if tail.len() == 0 {
+                match value {
+                    JSON_Value::Object(..) | JSON_Value::Array(..)
+                        => { return Some(value); },
+                    _ => {},
+                }
+            }
+        }
     }
+    return None;
 }
 
 type PeelResult<'a, T> = Option<(T, &'a [JSON_Token])>;
