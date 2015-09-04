@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 mod tokenize;
 use self::tokenize::{JSON_Token, tokenize_json_string};
 
@@ -102,7 +104,7 @@ fn peel_key_value_pair(tokens: &[JSON_Token]) -> PeelResult<KeyValuePair> {
     }
 }
 
-fn peel_value(mut tokens: &[JSON_Token]) -> PeelResult<JSON_Value> {
+fn peel_value(tokens: &[JSON_Token]) -> PeelResult<JSON_Value> {
     if tokens.len() == 0 { return None; }
     match &tokens[0] {
         &JSON_Token::LBrace => peel_object_as_value(tokens),
